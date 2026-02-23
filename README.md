@@ -2,7 +2,7 @@ This is the README file for the WiDok GitHub project, this includes all code and
 
 Add code / file explanation below:
 ---
-Main:
+Main: (IMPORTANT NOTE: If you want them to auto-start at boot, you have to change their name to main.py before uploading)
 WiDok-Wand
   -Main file for the Wand
 
