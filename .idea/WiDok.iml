@@ -2,9 +2,11 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$" type="micropython-source" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.14 (WiDok)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.12 (WiDok)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="MicroPythonToolsStubs" level="project" />
   </component>
 </module>
