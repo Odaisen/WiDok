@@ -15,7 +15,7 @@ Configure run options and add MicroPython upload and execute for quick upload an
 
 Please also add info to the `README.md` if you create a new file, or change / add to the functions of a file.
 
-> [!IMPORTANT]
+> [!TIP]
 > If you want the uploaded ESP32 files to auto-start at boot, change the WiDok-Wand / -Dock file name to main.py before uploading.
 
 ## File explanation
