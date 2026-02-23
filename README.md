@@ -10,6 +10,11 @@ WiDok-Wand
 WiDok-Dock
   -Main file for the Dock
 
+Requirements
+  -File with all required libraries
+  -Quick installation with: pip install -r requirements.txt
+  -Quick library adding with: pip freeze > requirements.txt (DO NOT RUN)
+
 ---
 Resources:
 Bluetooth-Protocol
