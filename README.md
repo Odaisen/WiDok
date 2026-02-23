@@ -1,41 +1,50 @@
-This is the README file for the WiDok GitHub project, this includes all code and eventually all Altium files for both the Dock and Wand.
+# WiDok<3
+WiDok is a library for all files and code for the Wireless Dock project
 
-Add code / file explanation below:
----
-Main: (IMPORTANT NOTE: If you want them to auto-start in the ESP32 at boot, change their filename to main.py before uploading to the ESP)
+## Installation
+Clone the project in PyCharm and follow [this](https://medium.com/@andymule/micropython-in-pycharms-basic-setup-9169b497ec8a) tutorial to get MicroPython set up in the project.
 
-WiDok-Wand
+Then install neccessary libraries using:
 
-  -Main file for the Wand
+```bash
+pip install -r requirements.txt
+```
 
-WiDok-Dock
+## Usage
+Configure run options and add MicroPython upload and execute for quick upload and testing to the ESP32.
 
-  -Main file for the Dock
+Please also add info to the `README.md` if you create a new file, or change / add to the functions of a file.
 
-Requirements
+> [!IMPORTANT]
+> If you want the uploaded ESP32 files to auto-start at boot, change the WiDok-Wand / -Dock file name to main.py before uploading.
 
-  -File with all required libraries
-  
-  -Quick installation with: pip install -r requirements.txt
-  
-  -Quick library adding with: pip freeze > requirements.txt (DO NOT RUN)
+## File explanation
+### Source folder
+🔹 **WiDok-Wand**
+  - Main file for the Wand
 
----
-Resources:
+🔹 **WiDok-Dock**
+    - Main file for the Dock
 
-Bluetooth-Protocol
+🔹 **Requirements**
+  - File with all required libraries
+  - Quick installation with:
+```bash
+pip install -r requirements.txt
+```
+  - Quick library updating with: (NOTE: DO NOT USE)
+```bash
+pip freeze > requirements.txt
+```
 
-  -All code for bluetooth communication between the Wand and the Dock
+### Resource folder
+🔹**Bluetooth-Protocol**
+ - All code for bluetooth communication between the Wand and the Dock (`Wand`, `Dock`)
 
-IMU-DataCollector
+🔹**IMU-DataCollector**
+ - All code for the communication with the on board IMU (`Wand`)
 
-  -All code for the communication with the on board IMU (Wand)
+🔹**Kalman-Filter**
+ - Kalman-Filter for the IMU-Data (`Dock`)
 
-Kalman-Filter
-
-  -Kalman-Filter for the IMU data (Dock)
-
----
-Thanks for the read<3
-
--Odaisen
+> **Thanks for the read<3** -Odaisen
