@@ -1,3 +1,6 @@
+# Programmer: Odaisen
+# Last Update: 23/02/26
+
 # Imports
 import asyncio
 import "Resources.Bluetooth-Protocol"

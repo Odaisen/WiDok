@@ -1,3 +1,6 @@
+# Programmer: Odaisen
+# Last Update: 23/02/26
+
 from micropython import const
 import asyncio
 import aioble
