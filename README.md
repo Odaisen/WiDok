@@ -38,13 +38,14 @@ pip freeze > requirements.txt
 ```
 
 ### Resource folder
-🔹**Bluetooth-Protocol**
- - All code for bluetooth communication between the Wand and the Dock (`Wand`, `Dock`)
+🔹**Bluetooth-Protocol** (`Wand`, `Dock`)
+ - All code for bluetooth communication between the Wand and the Dock
+ - To add characteristic ID's for new elements, genereate an unique UUID [here](https://www.uuidgenerator.net/)
 
-🔹**IMU-DataCollector**
- - All code for the communication with the on board IMU (`Wand`)
+🔹**IMU-DataCollector** (`Wand`)
+ - All code for the communication with the on board IMU
 
-🔹**Kalman-Filter**
- - Kalman-Filter for the IMU-Data (`Dock`)
+🔹**Kalman-Filter** (`Dock`)
+ - Kalman-Filter for the IMU-Data
 
 > **Thanks for the read<3** -Odaisen
