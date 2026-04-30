@@ -1,11 +1,17 @@
 # Programmer: Odaisen
 # Last Update: 30/04/26
 
-# Imports
-import asyncio
-import "Resources.Bluetooth-Protocol"
+# =========================
+# IMPORTS
+# =========================
 
-# Pin Info
+import asyncio
+import resources.bluetooth_protocol_wand as ble
+import resources.imu as imu
+
+# =========================
+# PIN DEFINITIONS
+# =========================
 '''
 IO8 - LED DI
 IO18 - LED BI
@@ -24,7 +30,14 @@ IO9 - Out Extra 3
 IO10 - Out Extra 4
 '''
 
-# Bluetooth initialization
+# =========================
+# BLUETOOTH INITIALIZATION
+# =========================
+
+
+# =========================
+# MAIN LOOP
+# =========================
 
 async def main():
     write_IMU = asyncio.create_task(_bluetooth_write(characteristic="_BLE_IMU_CHAR_ID"))
