@@ -1,61 +1,59 @@
 # Programmer: Odaisen
 # Last Update: 30/04/26
 
-# =========================
-# IMPORTS
-# =========================
-
 import asyncio
-import resources.bluetooth_protocol_wand as ble
+import time
+
 import resources.imu as imu
-
-# =========================
-# PIN DEFINITIONS
-# =========================
-'''
-IO8 - LED DI
-IO18 - LED BI
-
-IO21 - I2C CLK
-IO14 - I2C D
-IO13 - INT1 IMU
-IO12 - INT2 IMU
-
-IO35 - Battery sensing
-IO6 - Indicator LED
-
-IO3 - Out Extra 1
-IO46 - Out Extra 2
-IO9 - Out Extra 3
-IO10 - Out Extra 4
-'''
-
-# =========================
-# BLUETOOTH INITIALIZATION
-# =========================
+import resources.bluetooth_protocol_wand as ble
 
 
 # =========================
-# MAIN LOOP
+# IMU LOOP
+# =========================
+
+async def imu_loop():
+    while True:
+        imu.update()
+
+        ax, ay, az, gx, gy, gz = imu.read_raw()
+        qw, qx, qy, qz = imu.get_fused()
+
+        ts = time.ticks_ms()
+
+        ble.imu_raw_data = (ts, ax, ay, az, gx, gy, gz)
+        ble.imu_fused_data = (ts, qw, qx, qy, qz)
+
+        await asyncio.sleep(0.01)
+
+
+# =========================
+# SYSTEM LOOP
+# =========================
+
+async def system_loop():
+    while True:
+        ts = time.ticks_ms()
+
+        battery_mv = 3700
+        battery_pct = 85
+        flags = 0
+
+        ble.system_data = (ts, battery_mv, battery_pct, flags)
+
+        await asyncio.sleep(1)
+
+
+# =========================
+# MAIN
 # =========================
 
 async def main():
-    write_IMU = asyncio.create_task(_bluetooth_write(characteristic="_BLE_IMU_CHAR_ID"))
-    await_connection = asyncio.create_task(_bluetooth_await_connection())
-    await asyncio.gather(write_IMU, await_connection)
+    imu_task = asyncio.create_task(imu_loop())
+    sys_task = asyncio.create_task(system_loop())
+    ble_task = asyncio.create_task(ble.ble_main())
+
+    await asyncio.gather(imu_task, sys_task, ble_task)
+
 
 asyncio.run(main())
-
-'''
-All public bluetooth data:
-Device Name
-Firmware Version
-Timestamp
-Battery percentage
-Position vs starting position
-Rotation
-Interrupt 1 status IMU
-Interrupt 2 status IMU
-CPU Temp or other data
-LED status / colour
-'''
