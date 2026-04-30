@@ -1,12 +1,16 @@
-# Programmer: Odaisen
+# Programmer: Odaisen / Jus
 # Last Update: 23/02/26
 
+# Imports
 from micropython import const
 import asyncio
 import aioble
 import bluetooth
 import struct
 from machine import Pin
+
+# Definitions
+_ADV_INTERVAL_MS = 250_000
 
 # Bluetooth initialization
 def _bluetooth_initialize(Device):
@@ -15,13 +19,17 @@ def _bluetooth_initialize(Device):
     _BLE_IMU_CHAR_ID = bluetooth.UUID("444a2375-6b8c-44e3-a058-c375180896d8")
     # Add any variable as _BLE_*device*_CHAR_ID
     if Device=="WAND":
-        try:
-            _BLE_SERVICE = aioble.Service("_BLE_SERVICE_WAND_UUID")
-            IMU_characteristic = aioble.Characteristic(_BLE_SERVICE, _BLE_IMU_CHAR_ID, read=True, write=True, notify=True, capture=True)
-            return True
-        except Exception as e:
-            print("Failed bluetooth initialization:", e)
-            return False
+        _BLE_SERVICE = aioble.Service(_BLE_SERVICE_WAND_UUID)
+        IMU_characteristic = aioble.Characteristic(
+            _BLE_SERVICE,
+            _BLE_IMU_CHAR_ID,
+            read=True,
+            write=True,
+            notify=True,
+            capture=True
+        )
+        aioble.register_services(_BLE_SERVICE)
+        return _BLE_SERVICE, IMU_characteristic
     elif Device=="DOCK":
         try:
             # Input all code needed for dock bluetooth initialization
@@ -34,8 +42,8 @@ def _bluetooth_initialize(Device):
         return None
 
 
-def _bluetooth_encode(data):
-    return str(data).encode("utf-8")
+def _bluetooth_encode_imu(ax, ay, az):
+    return struct.pack("fff", ax, ay, az)
 
 def _bluetooth_decode(data):
     try:
@@ -58,7 +66,7 @@ async def _bluetooth_await_connection_wand():
             async with await aioble.advertise(
                 _ADV_INTERNAL_MS,
                 name="WiDok-Wand",
-                services=[BLE_SERVICE],
+                services=[service],
                 ) as connection:
                     print("Connected to: ", connection.device)
                     await connection.disconnected()
@@ -85,4 +93,3 @@ async def _bluetooth_wait_write(characteristic):
             print("Error while awaiting write: ", e)
         finally:
             await asyncio.sleep(0.1)
-
