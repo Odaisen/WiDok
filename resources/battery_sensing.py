@@ -3,28 +3,27 @@
 
 from machine import ADC, Pin
 BAT_PIN = 10
-ATTN = ADC.ATTN_6DB     # ~2.2 V full scale
-VREF = 2.2              # Effective reference at 6 dB (~2.2 V on ESP32)
-V_SCALING = 2           # Divider factor
+ATTN = ADC.ATTN_6DB
+VREF = 2.2 # TODO: Calibrate after connecting battery
+V_SCALING = 2
 _adc = None
+
+# ADC initialization check (prevents pin resets)
 def _get_adc():
     global _adc
     if _adc is None:
         _adc = ADC(Pin(BAT_PIN), atten=ATTN)
     return _adc
+
+# Returns (voltage, percent). Raises on hardware errors.
 def read_battery_v(samples=64):
-    """
-    Returns (voltage, percent). Raises on hardware errors.
-    """
     adc = _get_adc()
-    total = 0
-    for _ in range(max(1, int(samples))):
-        total += adc.read_u16()
-    raw = total // max(1, int(samples))
-    # Convert raw to volts at battery node
-    vol_batt = (raw * VREF / 65535.0) * V_SCALING
-    # Clamp and map to percent
-    if vol_batt <= 3.3:
+    readings = 0
+    for _ in range(max(1, int(samples))): # Extra safety for samples < 1
+        readings += adc.read_u16()
+    raw = readings // max(1, int(samples))
+    vol_batt = (raw * VREF / 65535.0) * V_SCALING # Raw to volts
+    if vol_batt <= 3.3: # Clamps max/min and maps percent
         pct_batt = 0
     elif vol_batt >= 4.2:
         pct_batt = 100
