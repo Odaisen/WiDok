@@ -66,13 +66,13 @@ async def imu_loop():
             ts = time.ticks_ms() & 0xFFFFFFFF  # ensure 32-bit
             ble.imu_raw_data = (ts, ax, ay, az, gx, gy, gz)
             ble.imu_fused_data = (ts, qw, qx, qy, qz)
-            await asyncio.sleep(0.01)
+            await asyncio.sleep_ms(10)
         except asyncio.CancelledError:
             break
         except Exception as e:
             if io:
                 io.signal(104, "wand", e)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep_ms(100)
 async def system_loop():
     if ble is None:
         return
