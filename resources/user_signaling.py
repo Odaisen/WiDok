@@ -17,7 +17,7 @@ ERROR_INFO = {
 # Devices with selected indicator LED
 _LED_PINS = {
     "wand": 6,
-    "dock": 0 # TODO: ADD VALID INDICATOR LED
+    "dock": 0 # TODO: ADD VALID INDICATOR LED. JUST ONE LED JUSTIN
 }
 _led_cache = {} # Caches LED to not initialize multiple times
 

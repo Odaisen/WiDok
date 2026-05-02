@@ -7,36 +7,34 @@ import bluetooth
 import struct
 import sys
 import time
+import user_signaling as io
 
 try:
     import resources.imu as imu
 except Exception as e:
     imu = None
-    try:
-        print("IMU import failed:", e)
-    except Exception:
-        pass
-SERVICE_UUID   = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb3")
-IMU_RAW_UUID   = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb4")
-IMU_FUSED_UUID = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb5")
-SYSTEM_UUID    = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb6")
-CONTROL_UUID   = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb7")
-ADV_INTERVAL_US = 250_000
-DEVICE_NAME = "WiDok-Wand"
-imu_raw_data = (0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-imu_fused_data = (0, 1.0, 0.0, 0.0, 0.0)
-system_data = (0, 0.0, 0, 0)
-aioble.config(mtu=96)
-service =           aioble.Service(SERVICE_UUID)
-imu_raw_char =      aioble.Characteristic(service, IMU_RAW_UUID, notify=True)
-imu_fused_char =    aioble.Characteristic(service, IMU_FUSED_UUID, notify=True)
-system_char =       aioble.Characteristic(service, SYSTEM_UUID, notify=True)
-control_char =      aioble.Characteristic(service, CONTROL_UUID, write=True, capture=True)
+    io.signal(101, "wand", e)
 
+aioble.config(mtu=96)
+SERVICE_UUID        =   bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb3")
+IMU_RAW_UUID        =   bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb4")
+IMU_FUSED_UUID      =   bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb5")
+SYSTEM_UUID         =   bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb6")
+CONTROL_UUID        =   bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb7")
+ADV_INTERVAL_US     =   250_000
+DEVICE_NAME         =   "WiDok-Wand"
+imu_raw_data        =   (0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+imu_fused_data      =   (0, 1.0, 0.0, 0.0, 0.0)
+system_data         =   (0, 0.0, 0, 0)
+service             =   aioble.Service(SERVICE_UUID)
+imu_raw_char        =   aioble.Characteristic(service, IMU_RAW_UUID, notify=True)
+imu_fused_char      =   aioble.Characteristic(service, IMU_FUSED_UUID, notify=True)
+system_char         =   aioble.Characteristic(service, SYSTEM_UUID, notify=True)
+control_char        =   aioble.Characteristic(service, CONTROL_UUID, write=True, capture=True)
 aioble.register_services(service)
 
+# Returns True if Notify bit is set for this characteristic’s CCCD
 def _cccd_enabled(char):
-    # Returns True if Notify bit is set for this characteristic’s CCCD
     try:
         h = getattr(char, "cccd_handle", None) or getattr(char, "_cccd_handle", None)
         ble_obj = getattr(aioble, "_ble", None)
