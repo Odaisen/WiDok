@@ -10,6 +10,8 @@ import time
 
 from machine import Pin, I2C
 
+from resources.battery_sensing import read_battery_v
+
 try:
     import resources.imu as imu
 except Exception as e:
@@ -24,6 +26,8 @@ try:
     import resources.battery_sensing as bat
 except Exception as e:
     print("Battery Sensing Initialization Failed: ", e)
+
+indicator_led = Pin(6, mode=Pin.OUT)
 
 ''' 
 IO8     - LED DI
@@ -93,14 +97,20 @@ async def system_loop():
 
 async def diagnostic_loop(i2c):
     print("Diagnosing...")
+    print("Turning LED on")
+    indicator_led.on()
+    await asyncio.sleep(3)
+    #print("Turning LED off")
+    #indicator_led.off()
     while True:
         try:
             ts = time.ticks_ms()
 
             print("Time: ", ts)
+            print("Battery level: ", str(read_battery_v()))
             #print("I2C Scan:", i2c.scan())
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
         except asyncio.CancelledError:
             break
 
@@ -111,8 +121,9 @@ async def diagnostic_loop(i2c):
 
 async def main():
     i2c = imu.init()
-    imu_task = asyncio.create_task(imu_loop())
+    #imu_task = asyncio.create_task(imu_loop())
     sys_task = asyncio.create_task(system_loop())
-    ble_task = asyncio.create_task(ble.ble_main())
+    #ble_task = asyncio.create_task(ble.ble_main())
     diag_task = asyncio.create_task(diagnostic_loop(i2c))
-    await asyncio.gather(imu_task, sys_task, ble_task, diag_task)
+    #imu_task, ble_task,
+    await asyncio.gather(sys_task, diag_task)
