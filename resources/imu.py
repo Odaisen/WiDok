@@ -1,6 +1,12 @@
 # Programmer: Odaisen
-# IMU module
+# Last Update: 01/05/26
 
+# =========================
+# IMPORTS
+# =========================
+
+from machine import Pin, I2C
+import struct
 import time
 
 # =========================
@@ -11,12 +17,14 @@ _latest_raw = (0,0,0,0,0,0)
 _latest_fused = (1,0,0,0)
 
 # =========================
-# SENSOR INIT (placeholder)
+# SENSOR INIT
 # =========================
 
 def init():
-    # init I2C, IMU chip, etc
-    pass
+    sda = Pin(14, Pin.OPEN_DRAIN, Pin.PULL_UP)
+    scl = Pin(21, Pin.OPEN_DRAIN, Pin.PULL_UP)
+    i2c = I2C(1, scl=scl, sda=sda, freq=100_000)
+    return i2c
 
 # =========================
 # UPDATE SENSOR

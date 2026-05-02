@@ -1,7 +1,11 @@
 # Programmer: Odaisen
-# Last Update: 30/04/26
+# Last Update: 01/05/26
 
-import asyncio
+# =========================
+# IMPORTS
+# =========================
+
+import uasyncio as asyncio
 import aioble
 import bluetooth
 import struct
@@ -23,21 +27,23 @@ ADV_INTERVAL_US = 250_000
 # BLE STATE (filled by main)
 # =========================
 
-imu_raw_data = None
-imu_fused_data = None
-system_data = None
+imu_raw_data = (0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+imu_fused_data = (0, 1.0, 0.0, 0.0, 0.0)
+system_data = (0, 0.0, 0, 0)
 
 # =========================
 # SERVICE SETUP
 # =========================
 
-service = aioble.Service(SERVICE_UUID)
+aioble.config(mtu=96)
 
-imu_raw_char = aioble.Characteristic(service, IMU_RAW_UUID, notify=True)
-imu_fused_char = aioble.Characteristic(service, IMU_FUSED_UUID, notify=True)
-system_char = aioble.Characteristic(service, SYSTEM_UUID, notify=True)
+service =           aioble.Service(SERVICE_UUID)
 
-control_char = aioble.Characteristic(service, CONTROL_UUID, write=True, capture=True)
+imu_raw_char =      aioble.Characteristic(service, IMU_RAW_UUID, notify=True)
+imu_fused_char =    aioble.Characteristic(service, IMU_FUSED_UUID, notify=True)
+system_char =       aioble.Characteristic(service, SYSTEM_UUID, notify=True)
+
+control_char =      aioble.Characteristic(service, CONTROL_UUID, write=True, capture=True)
 
 aioble.register_services(service)
 
@@ -51,8 +57,31 @@ def encode_imu_raw(ts, ax, ay, az, gx, gy, gz):
 def encode_imu_fused(ts, qw, qx, qy, qz):
     return struct.pack("<Iffff", ts, qw, qx, qy, qz)
 
-def encode_system(ts, battery_mv, battery_pct, flags):
-    return struct.pack("<IHBb", ts, battery_mv, battery_pct, flags)
+def encode_system(ts, battery_v, battery_pct, flags):
+    return struct.pack("<IfBB", ts, battery_v, battery_pct, flags)
+
+'''
+Letter definitions: 
+I - Unsigned int    (4 bytes) 
+f - Float           (4 bytes) 
+H - Unsigned short  (2 bytes) 
+B - Unsigned byte   (1 byte) 
+b - Signed byte     (1 byte) 
+'''
+
+'''
+All data that should be public (may not be implemented)
+Device Name
+Firmware Version
+Timestamp
+Battery percentage
+Position vs starting position
+Rotation
+Interrupt 1 status IMU
+Interrupt 2 status IMU
+CPU Temp or other data
+LED status / colour
+'''
 
 # =========================
 # TASKS
@@ -61,25 +90,44 @@ def encode_system(ts, battery_mv, battery_pct, flags):
 async def send_imu_raw(connection):
     global imu_raw_data
     while True:
-        if imu_raw_data:
-            imu_raw_char.notify(connection, encode_imu_raw(*imu_raw_data))
-        await asyncio.sleep(0.02)
-
+        try:
+            data = imu_raw_data
+            if isinstance(data, tuple) and len(data) == 7:
+                await imu_raw_char.notify(connection, encode_imu_raw(*data))
+            await asyncio.sleep(0.02)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print("IMU Raw send error:", e)
+        await asyncio.sleep(0.1)
 
 async def send_imu_fused(connection):
     global imu_fused_data
     while True:
-        if imu_fused_data:
-            imu_fused_char.notify(connection, encode_imu_fused(*imu_fused_data))
-        await asyncio.sleep(0.1)
-
+        try:
+            data = imu_fused_data
+            if isinstance(data, tuple) and len(data) == 5:
+                await imu_fused_char.notify(connection, encode_imu_fused(*data))
+            await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print("IMU Fused send error:", e)
+        await asyncio.sleep(0.2)
 
 async def send_system(connection):
     global system_data
     while True:
-        if system_data:
-            system_char.notify(connection, encode_system(*system_data))
-        await asyncio.sleep(1)
+        try:
+            data = system_data
+            if isinstance(data, tuple) and len(data) == 4:
+                await system_char.notify(connection, encode_system(*data))
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print("System send error:", e)
+        await asyncio.sleep(0.5)
 
 
 async def handle_control():
@@ -104,24 +152,29 @@ async def handle_control():
 
 async def ble_main():
     while True:
-        async with await aioble.advertise(
-            ADV_INTERVAL_US,
-            name="WiDok-Wand",
-            services=[SERVICE_UUID],
-        ) as connection:
-
+        try:
+            print("Advertising...")
+            connection = await aioble.advertise(
+                ADV_INTERVAL_US,
+                name="WiDok-Wand",
+                services=[SERVICE_UUID],
+            )
             print("Connected:", connection.device)
-
             t1 = asyncio.create_task(send_imu_raw(connection))
             t2 = asyncio.create_task(send_imu_fused(connection))
             t3 = asyncio.create_task(send_system(connection))
             t4 = asyncio.create_task(handle_control())
-
             await connection.disconnected()
-
-            t1.cancel()
-            t2.cancel()
-            t3.cancel()
-            t4.cancel()
-
+            for t in (t1, t2, t3, t4):
+                t.cancel()
+            for t in (t1, t2, t3, t4):
+                try:
+                    await t
+                except asyncio.CancelledError:
+                    pass
             await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print("Exception in ble_main:", e)
+            await asyncio.sleep(0.5)
