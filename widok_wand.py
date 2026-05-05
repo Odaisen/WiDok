@@ -125,7 +125,7 @@ async def main(run_diag=True):
     tasks = []
     try:
         if imu and ble:
-            tasks.append(asyncio.create_task(imu_loop()))
+            #tasks.append(asyncio.create_task(imu_loop()))
         if ble:
             tasks.append(asyncio.create_task(ble.ble_main()))
         tasks.append(asyncio.create_task(system_loop()))
