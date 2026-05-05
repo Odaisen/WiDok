@@ -24,7 +24,7 @@ Please also add info to the `README.md` if you create a new file, or change / ad
   - Main file for the Wand
 
 🔹 **WiDok-Dock**
-    - Main file for the Dock
+  - Main file for the Dock
 
 🔹 **Requirements**
   - File with all required libraries

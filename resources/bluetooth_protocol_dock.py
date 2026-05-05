@@ -1,95 +1,181 @@
-# Programmer: Odaisen / Jus
-# Last Update: 23/02/26
+# Programmer: Odaisen / jus
+# Last Update: 02/05/26
 
-# Imports
-from micropython import const
-import asyncio
+# =========================
+# IMPORTS
+# =========================
+
+import uasyncio as asyncio
 import aioble
 import bluetooth
 import struct
-from machine import Pin
+import time
 
-# Definitions
-_ADV_INTERVAL_MS = 250_000
+# =========================
+# UUIDs
+# =========================
+'''
+SERVICE_UUID   = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb3")
+IMU_RAW_UUID   = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb4")
+IMU_FUSED_UUID = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb5")
+SYSTEM_UUID    = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb6")
+CONTROL_UUID   = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb7")
+'''
+ADV_INTERVAL_US = 250_000
 
-# Bluetooth initialization
-def _bluetooth_initialize(Device):
-    _BLE_SERVICE_WAND_UUID = bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb3")
-    _BLE_SERVICE_DOCK_UUID = bluetooth.UUID("9694a3c2-101b-4693-bc53-fe92dae8a9e2")
-    _BLE_IMU_CHAR_ID = bluetooth.UUID("444a2375-6b8c-44e3-a058-c375180896d8")
-    # Add any variable as _BLE_*device*_CHAR_ID
-    if Device=="WAND":
-        _BLE_SERVICE = aioble.Service(_BLE_SERVICE_WAND_UUID)
-        IMU_characteristic = aioble.Characteristic(
-            _BLE_SERVICE,
-            _BLE_IMU_CHAR_ID,
-            read=True,
-            write=True,
-            notify=True,
-            capture=True
-        )
-        aioble.register_services(_BLE_SERVICE)
-        return _BLE_SERVICE, IMU_characteristic
-    elif Device=="DOCK":
-        try:
-            # Input all code needed for dock bluetooth initialization
-            return True
-        except Exception as e:
-            print("Failed bluetooth initialization: ", e)
-            return False
-    else:
-        print("Unknown Device.")
-        return None
+# =========================
+# BLE STATE (filled by main)
+# =========================
 
+#imu_raw_data = (0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+#imu_fused_data = (0, 1.0, 0.0, 0.0, 0.0)
+#system_data = (0, 0.0, 0, 0)
 
-def _bluetooth_encode_imu(ax, ay, az):
-    return struct.pack("fff", ax, ay, az)
+# =========================
+# SERVICE SETUP
+# =========================
 
-def _bluetooth_decode(data):
-    try:
-        if isinstance(data, bytes):
-            return int.from_bytes(data, "big")
-        elif isinstance(data, str):
-            return int(data)
-        return data
-    except Exception as e:
-        print("Error decoding data:", e)
-        return None
+aioble.config(mtu=96)
 
-async def _bluetooth_write(data, characteristic):
-    characteristic.write(_bluetooth_encode(data), send_update=True)
-    await asyncio.sleep(0.1)
+service =           aioble.Service(SERVICE_UUID)
 
-async def _bluetooth_await_connection_wand():
+#imu_raw_char =      aioble.Characteristic(service, IMU_RAW_UUID, notify=True)
+#imu_fused_char =    aioble.Characteristic(service, IMU_FUSED_UUID, notify=True)
+#system_char =       aioble.Characteristic(service, SYSTEM_UUID, notify=True)
+
+control_char =      aioble.Characteristic(service, CONTROL_UUID, write=True, capture=True)
+
+aioble.register_services(service)
+
+# =========================
+# ENCODERS (should be decoders in stead)
+# =========================
+'''
+def encode_imu_raw(ts, ax, ay, az, gx, gy, gz):
+    return struct.pack("<Iffffff", ts, ax, ay, az, gx, gy, gz)
+
+def encode_imu_fused(ts, qw, qx, qy, qz):
+    return struct.pack("<Iffff", ts, qw, qx, qy, qz)
+
+def encode_system(ts, battery_v, battery_pct, flags):
+    return struct.pack("<IfBB", ts, battery_v, battery_pct, flags)
+'''
+'''
+Letter definitions: 
+I - Unsigned int    (4 bytes) 
+f - Float           (4 bytes) 
+H - Unsigned short  (2 bytes) 
+B - Unsigned byte   (1 byte) 
+b - Signed byte     (1 byte) 
+'''
+
+'''
+All data that should be public (may not be implemented)
+Device Name
+Firmware Version
+Timestamp
+Battery percentage
+Position vs starting position
+Rotation
+Interrupt 1 status IMU
+Interrupt 2 status IMU
+CPU Temp or other data
+LED status / colour
+'''
+
+# =========================
+# TASKS
+# =========================
+'''
+async def send_imu_raw(connection):
+    global imu_raw_data
     while True:
         try:
-            async with await aioble.advertise(
-                _ADV_INTERNAL_MS,
+            data = imu_raw_data
+            if isinstance(data, tuple) and len(data) == 7:
+                await imu_raw_char.notify(connection, encode_imu_raw(*data))
+            await asyncio.sleep(0.02)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print("IMU Raw send error:", e)
+        await asyncio.sleep(0.1)
+
+async def send_imu_fused(connection):
+    global imu_fused_data
+    while True:
+        try:
+            data = imu_fused_data
+            if isinstance(data, tuple) and len(data) == 5:
+                await imu_fused_char.notify(connection, encode_imu_fused(*data))
+            await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print("IMU Fused send error:", e)
+        await asyncio.sleep(0.2)
+
+async def send_system(connection):
+    global system_data
+    while True:
+        try:
+            data = system_data
+            if isinstance(data, tuple) and len(data) == 4:
+                await system_char.notify(connection, encode_system(*data))
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print("System send error:", e)
+        await asyncio.sleep(0.5)
+
+
+async def handle_control():
+    while True:
+        try:
+            conn, data = await control_char.written()
+            cmd = data[0]
+
+            if cmd == 1:
+                print("LED command received")
+
+            elif cmd == 2:
+                print("Reset requested")
+
+        except asyncio.CancelledError:
+            break
+
+
+# =========================
+# MAIN BLE LOOP
+# =========================
+
+async def ble_main():
+    while True:
+        try:
+            print("Advertising...")
+            connection = await aioble.advertise(
+                ADV_INTERVAL_US,
                 name="WiDok-Wand",
-                services=[service],
-                ) as connection:
-                    print("Connected to: ", connection.device)
-                    await connection.disconnected()
-        except asyncio.CancelledError:
-            print("Await Connection Cancelled")
-        except Exception as e:
-            print("Error while awaiting connection: ", e)
-        finally:
+                services=[SERVICE_UUID],
+            )
+            print("Connected:", connection.device)
+            t1 = asyncio.create_task(send_imu_raw(connection))
+            t2 = asyncio.create_task(send_imu_fused(connection))
+            t3 = asyncio.create_task(send_system(connection))
+            t4 = asyncio.create_task(handle_control())
+            await connection.disconnected()
+            for t in (t1, t2, t3, t4):
+                t.cancel()
+            for t in (t1, t2, t3, t4):
+                try:
+                    await t
+                except asyncio.CancelledError:
+                    pass
             await asyncio.sleep(0.1)
-
-async def _bluetooth_wait_write(characteristic):
-    while True:
-        try:
-            connection, data = await characteristic.written()
-            print(data)
-            print(type)
-            data = _bluetooth_decode(data)
-            print('Connection: ', connection)
-            print('Data: ', data)
-            return data
         except asyncio.CancelledError:
-            print("Await Write Cancelled")
+            break
         except Exception as e:
-            print("Error while awaiting write: ", e)
-        finally:
-            await asyncio.sleep(0.1)
+            print("Exception in ble_main:", e)
+            await asyncio.sleep(0.5)
+'''
