@@ -13,7 +13,6 @@ Chase
 Rainbow
 '''
 
-
 _ADDR_LED_PINS = {
     "wand": (8, 18),   # IO8=DI, IO18=BI
     "dock": (0, 0),    # placeholder
