@@ -12,6 +12,7 @@ ERROR_INFO = {
     104: ("IMU error", 4),
     105: ("Battery sensing error", 5),
     106: ("Temperature error", 6),
+    107: ("Addressable LED error", 7),
 }
 
 # Devices with selected indicator LED

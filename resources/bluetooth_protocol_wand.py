@@ -7,7 +7,7 @@ import bluetooth
 import struct
 import sys
 import time
-import user_signaling as io
+import resources.user_signaling as io
 
 try:
     import resources.imu as imu

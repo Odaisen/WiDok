@@ -2,19 +2,19 @@
 # Last Update: 02/05/26
 
 from machine import Pin, I2C
-import user_signaling as io
+import resources.user_signaling as io
 _latest_raw = (0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
 _latest_fused = (1.0, 0.0, 0.0, 0.0)
 _i2c = None
 
 # Initialize and cache I2C for the IMU. Returns the I2C handle (or None on failure)
-def init(freq=400_000):
+def init(freq=100_000):
     global _i2c
     if _i2c:
         return _i2c
     try:
-        sda = Pin(14, Pin.OPEN_DRAIN, Pin.PULL_UP)
-        scl = Pin(21, Pin.OPEN_DRAIN, Pin.PULL_UP)
+        sda = Pin(14, Pin.OPEN_DRAIN, pull=Pin.PULL_UP)
+        scl = Pin(21, Pin.OPEN_DRAIN, pull=Pin.PULL_UP)
         _i2c = I2C(1, scl=scl, sda=sda, freq=freq)
     except Exception as e:
         io.signal(104, "wand", e)
