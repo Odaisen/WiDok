@@ -2,7 +2,7 @@
 # Last update: 02/05/26
 
 import uasyncio as asyncio
-from machine import Pin
+from machine import Pin, Signal
 
 # Error codes with attached cause
 ERROR_INFO = {
@@ -18,8 +18,11 @@ ERROR_INFO = {
 # Devices with selected indicator LED
 _LED_PINS = {
     "wand": 6,
-    "dock": 4 #  ADD VALID INDICATOR LED. JUST ONE LED JUSTIN
-    #should be number 4, since it's both in pin 4 and is IO 4, tdo removed -justin
+    "dock": 4
+}
+
+_LED_INVERTED = {
+    "dock": True,
 }
 _led_cache = {} # Caches LED to not initialize multiple times
 
@@ -39,10 +42,12 @@ def _get_led(device: str) -> Pin:
     pin_num = _LED_PINS.get(device)
     if pin_num is None:
         raise ValueError("Unknown device '{}' or LED pin not set".format(device))
-    led = _led_cache.get(pin_num) # Check if LED is already cached (Prevents pin resets)
+    invert = _LED_INVERTED.get(device, False)
+    led = _led_cache.get(device) # Check if LED is already cached (Prevents pin resets)
     if led is None: # Runs if LED is not cached
-        led = Pin(pin_num, mode=Pin.OUT)
-        _led_cache[pin_num] = led
+        pin = Pin(pin_num, mode=Pin.OUT)
+        led = Signal(pin, invert=invert)
+        _led_cache[device] = led
     return led
 
 # Called function for error signaling
