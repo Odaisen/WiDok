@@ -17,7 +17,7 @@ def init(freq=100_000):
         scl = Pin(21, Pin.OPEN_DRAIN, pull=Pin.PULL_UP)
         _i2c = I2C(1, scl=scl, sda=sda, freq=freq)
     except Exception as e:
-        io.signal(104, "wand", e)
+        io.signal(104, e)
         _i2c = None
     return _i2c
 
