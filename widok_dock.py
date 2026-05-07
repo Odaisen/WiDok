@@ -1,12 +1,13 @@
 # Programmer: Justin
 # Last Update: 02/05/26
-import machine
-import time
+
 # =========================
 # IMPORTS
 # =========================
-
+import machine
+import time
 import uasyncio as asyncio
+import resources.bluetooth_protocol_dock as ble_dock
 #import time
 from time import sleep
 from machine import Pin, Signal#, I2C
@@ -40,6 +41,30 @@ try:
     """
 except Exception as e:
     io.signal(102, "dock", e)
+
+
+# Consume system data (battery, flags)
+async def system_consumer():
+    while True:
+        try:
+            ts, batt_v, batt_pct, flags = await ble_dock.system_queue.get()
+            print("SYSTEM:", ts, "V=", batt_v, "pct=", batt_pct, "flags=", flags)
+            if batt_pct <= 15:
+                print("Warning: Low battery on wand!")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print("system_consumer error:", e)
+# If you want a very light setup, you can skip the above consumers and rely on:
+# - ble_dock.system_latest
+# - ble_dock.imu_fused_latest
+# - ble_dock.imu_raw_latest
+# polled on a timer/task. The queue-based approach is better for streaming.
+
+
+
+
+
 
 async def test_leds():
     print("Testing all 4 LEDs one by one...")
@@ -213,6 +238,16 @@ async def main():
         #stop_pwm_h(pwm_h)
     #pin_pwm_l.value(1)
     print("pwm stuff done?")
+
+    # Start BLE client in the background
+    asyncio.create_task(ble_client_main())
+
+    # Your normal main loop (still runs everything else)
+    while True:
+        # Example: every 5 seconds send a test command
+        # await send_command(1)   # rainbow LEDs on host
+        await asyncio.sleep_ms(50)
+
 
     while False:
         p_test.value(1)
