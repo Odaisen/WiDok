@@ -13,14 +13,14 @@ try:
     import resources.imu as imu
 except Exception as e:
     imu = None
-    io.signal(101, "wand", e)
+    io.signal(101, e)
 
 try:
     import resources.led_control as addr_leds
 except Exception as e:
     addr_leds = None
     print("Adressable led import failed: ", e)
-    io.signal(107, "wand", e)
+    io.signal(107, e)
 
 aioble.config(mtu=96)
 SERVICE_UUID        =   bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb3")
@@ -88,7 +88,7 @@ async def send_imu_raw(connection):
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(104, "wand", e)
+            io.signal(104, e)
 
 async def send_imu_fused(connection):
     while True:
@@ -108,7 +108,7 @@ async def send_imu_fused(connection):
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(104, "wand", e)
+            io.signal(104, e)
 
 async def send_system(connection):
     while True:
@@ -128,7 +128,7 @@ async def send_system(connection):
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(105, "wand", e)
+            io.signal(105, e)
 
 # Checks writable bits and handles commands
 async def handle_control():
@@ -148,11 +148,11 @@ async def handle_control():
                     if imu:
                         imu.reset()
                 except Exception as e:
-                    io.signal(104, "wand", e)
+                    io.signal(104, e)
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(103, "wand", e)
+            io.signal(103, e)
 
 # Advertises device, publishes data after connect, stops publishing after disconnect
 async def ble_main():
@@ -182,4 +182,4 @@ async def ble_main():
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(103, "wand", e)
+            io.signal(103, e)
