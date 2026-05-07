@@ -19,9 +19,10 @@ def _get_adc():
 def read_battery_v(samples=64):
     adc = _get_adc()
     readings = 0
-    for _ in range(max(1, int(samples))): # Extra safety for samples < 1
+    n = max(1, int(samples))
+    for _ in range(n):
         readings += adc.read_u16()
-    raw = readings // max(1, int(samples))
+    raw = readings // n
     vol_batt = (raw * VREF / 65535.0) * V_SCALING # Raw to volts
     if vol_batt <= 3.3: # Clamps max/min and maps percent
         pct_batt = 0
