@@ -129,7 +129,7 @@ async def main(run_diag=True):
     #i2c = None
     #if imu:
         #i2c = imu.init()
-    addr_leds.init(device="wand", segments=1, leds_per_segment=20, brightness=0.12)
+    addr_leds.init(device="wand", segments=1, leds_per_segment=20, brightness=0)
     addr_leds.set_mode("rainbow", color=(0, 64, 128), period_ms=1800)
     tasks = []
     try:

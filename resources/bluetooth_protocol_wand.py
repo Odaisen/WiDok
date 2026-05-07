@@ -15,6 +15,13 @@ except Exception as e:
     imu = None
     io.signal(101, "wand", e)
 
+try:
+    import resources.led_control as addr_leds
+except Exception as e:
+    addr_leds = None
+    print("Adressable led import failed: ", e)
+    io.signal(107, "wand", e)
+
 aioble.config(mtu=96)
 SERVICE_UUID        =   bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb3")
 IMU_RAW_UUID        =   bluetooth.UUID("671201d2-9252-4eab-adbc-ee068e20cbb4")
@@ -33,7 +40,7 @@ system_char         =   aioble.Characteristic(service, SYSTEM_UUID, notify=True)
 control_char        =   aioble.Characteristic(service, CONTROL_UUID, write=True, capture=True)
 aioble.register_services(service)
 
-# Returns True if Notify bit is set for this characteristic’s CCCD
+# Returns True if client has enabled notify bit (fixes bug if client cannot enable notify)
 def _cccd_enabled(char):
     try:
         h = getattr(char, "cccd_handle", None) or getattr(char, "_cccd_handle", None)
@@ -48,71 +55,22 @@ def _cccd_enabled(char):
     except Exception:
         return False
 
-
-def _print_cccd_state():
-    try:
-        def hpair(ch):
-            vh = getattr(ch, "value_handle", None) or getattr(ch, "_value_handle", None)
-            chh = getattr(ch, "cccd_handle", None) or getattr(ch, "_cccd_handle", None)
-            return vh, chh
-
-        print(
-            "Handles imu_raw:", hpair(imu_raw_char),
-            "imu_fused:", hpair(imu_fused_char),
-            "system:", hpair(system_char)
-        )
-
-        vals = []
-        for name, ch in (
-            ("imu_raw", imu_raw_char),
-            ("imu_fused", imu_fused_char),
-            ("system", system_char),
-        ):
-            on = _cccd_enabled(ch)
-            vals.append("{}:{}".format(name, "ON" if on else "off"))
-
-        print("CCCD:", ", ".join(vals))
-    except Exception as e:
-        print("CCCD diag failed:", e)
-
-
-async def _wait_for_any_subscription(timeout_ms=5000):
-    t0 = time.ticks_ms()
-    printed = False
-    while time.ticks_diff(time.ticks_ms(), t0) < timeout_ms:
-        if not printed:
-            print("Waiting for client to enable notifications (toggle Notify in nRF Connect)…")
-            _print_cccd_state()
-            printed = True
-
-        if (
-            _cccd_enabled(imu_raw_char)
-            or _cccd_enabled(imu_fused_char)
-            or _cccd_enabled(system_char)
-        ):
-            print("At least one CCCD enabled.")
-            return True
-
-        await asyncio.sleep(0.2)
-
-    _print_cccd_state()
-    print("No CCCD enabled within timeout; will still run but skip notify until enabled.")
-    return False
-
 def encode_imu_raw(ts, ax, ay, az, gx, gy, gz):
     return struct.pack("<Iffffff", ts, ax, ay, az, gx, gy, gz)
 def encode_imu_fused(ts, qw, qx, qy, qz):
     return struct.pack("<Iffff", ts, qw, qx, qy, qz)
 def encode_system(ts, battery_v, battery_pct, flags):
     return struct.pack("<IfBB", ts, battery_v, battery_pct, flags)
-# Letter definitions:
-# I - Unsigned int    (4 bytes)
-# f - Float           (4 bytes)
-# H - Unsigned short  (2 bytes)
-# B - Unsigned byte   (1 byte)
-# b - Signed byte     (1 byte)
+'''
+Letter definitions:
+I - Unsigned int    (4 bytes)
+f - Float           (4 bytes)
+H - Unsigned short  (2 bytes)
+B - Unsigned byte   (1 byte)
+b - Signed byte     (1 byte)
+'''
+
 async def send_imu_raw(connection):
-    first_ok = True
     while True:
         try:
             if not _cccd_enabled(imu_raw_char):
@@ -123,31 +81,16 @@ async def send_imu_raw(connection):
             if isinstance(data, tuple) and len(data) == 7:
                 payload = encode_imu_raw(*data)
                 imu_raw_char.write(payload)
-                try:
-                    await imu_raw_char.notify(connection)
-                except TypeError:
-                    # Some aioble builds want no connection argument
-                    await imu_raw_char.notify()
-
-                if first_ok:
-                    print("imu_raw: first notify OK")
-                    first_ok = False
+                await imu_raw_char.notify(connection)
 
             await asyncio.sleep(0.02)
 
         except asyncio.CancelledError:
             break
         except Exception as e:
-            print("IMU Raw send error:", e)
-            try:
-                sys.print_exception(e)
-            except Exception:
-                pass
-            await asyncio.sleep(0.2)
-
+            io.signal(104, "wand", e)
 
 async def send_imu_fused(connection):
-    first_ok = True
     while True:
         try:
             if not _cccd_enabled(imu_fused_char):
@@ -158,30 +101,16 @@ async def send_imu_fused(connection):
             if isinstance(data, tuple) and len(data) == 5:
                 payload = encode_imu_fused(*data)
                 imu_fused_char.write(payload)
-                try:
-                    await imu_fused_char.notify(connection)
-                except TypeError:
-                    await imu_fused_char.notify()
-
-                if first_ok:
-                    print("imu_fused: first notify OK")
-                    first_ok = False
+                await imu_fused_char.notify(connection)
 
             await asyncio.sleep(0.1)
 
         except asyncio.CancelledError:
             break
         except Exception as e:
-            print("IMU Fused send error:", e)
-            try:
-                sys.print_exception(e)
-            except Exception:
-                pass
-            await asyncio.sleep(0.5)
-
+            io.signal(104, "wand", e)
 
 async def send_system(connection):
-    first_ok = True
     while True:
         try:
             if not _cccd_enabled(system_char):
@@ -192,27 +121,16 @@ async def send_system(connection):
             if isinstance(data, tuple) and len(data) == 4:
                 payload = encode_system(*data)
                 system_char.write(payload)
-                try:
-                    await system_char.notify(connection)
-                except TypeError:
-                    await system_char.notify()
-
-                if first_ok:
-                    print("system: first notify OK")
-                    first_ok = False
+                await system_char.notify(connection)
 
             await asyncio.sleep(1.0)
 
         except asyncio.CancelledError:
             break
         except Exception as e:
-            print("System send error:", e)
-            try:
-                sys.print_exception(e)
-            except Exception:
-                pass
-            await asyncio.sleep(1.0)
+            io.signal(105, "wand", e)
 
+# Checks writable bits and handles commands
 async def handle_control():
     while True:
         try:
@@ -222,23 +140,21 @@ async def handle_control():
             cmd = data[0]
             if cmd == 1:
                 print("LED command received")
-                # TODO: Add LED handling if desired.
+                addr_leds.set_brightness(0.12)
+
             elif cmd == 2:
                 print("Reset requested")
                 try:
                     if imu:
                         imu.reset()
                 except Exception as e:
-                    print("IMU reset failed:", e)
+                    io.signal(104, "wand", e)
         except asyncio.CancelledError:
             break
         except Exception as e:
-            try:
-                print("Control handler error:", e)
-            except Exception:
-                pass
-            await asyncio.sleep(0.2)
+            io.signal(103, "wand", e)
 
+# Advertises device, publishes data after connect, stops publishing after disconnect
 async def ble_main():
     while True:
         try:
@@ -266,8 +182,4 @@ async def ble_main():
         except asyncio.CancelledError:
             break
         except Exception as e:
-            try:
-                print("Exception in ble_main:", e)
-            except Exception:
-                pass
-            await asyncio.sleep(0.5)
+            io.signal(103, "wand", e)
