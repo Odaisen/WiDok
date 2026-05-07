@@ -91,7 +91,11 @@ def signal(error_code, error_msg="", on_ms=500, off_ms=500, gap_ms=1000,
            repeat=False, log=True, log_each_group=False):
     dev = _device_cache
     if not _init or _device_cache not in _led_cache:
-        raise ValueError("User signaling not initialized")
+        try:
+            code_int, desc, _ = _parse_error(error_code)
+            print("Signal (no LED): {} - {}\nError info: {}".format(code_int, desc, error_msg))
+        except Exception: pass
+        return None
     stop()
     try:
         task = asyncio.create_task(
@@ -143,6 +147,8 @@ async def _signal(dev, code, error, on_ms=500, off_ms=500, gap_ms=1000,
 # LED blinking task
 async def blink(led, times, on_ms=500, off_ms=500):
     try:
+        on_ms = int(on_ms)
+        off_ms = int(off_ms)
         for _ in range(int(times)):
             led.on()
             await asyncio.sleep_ms(on_ms)

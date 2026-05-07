@@ -57,19 +57,22 @@ def _get_device_pins(device):
     pins = _ADDR_LED_PINS.get(device)
     if not pins:
         raise ValueError("Unknown device '{}' or LED pins not set".format(device))
-    return int(pins[0]), int(pins[1])
+    di, bi = pins
+    di = None if di is None else int(di)
+    bi = None if bi is None else int(bi)
+    return di, bi
 
 class _WS281xController:
     def __init__(self, total_leds, di_pin, bi_pin, brightness):
         self.total = int(total_leds)
         if self.total <= 0:
             raise ValueError("Total LEDs must be > 0")
-        self.di_pin = int(di_pin)
-        self.bi_pin = int(bi_pin)
-        self.brightness = max(0.0, min(1.0, float(brightness)))
-        if self.di_pin in (0, None):
+        if di_pin in (None, 0):
             raise ValueError("DI pin must be a valid non-zero pin")
-        self._use_bi = (self.bi_pin not in (None, 0)) and (self.bi_pin != self.di_pin)
+        self.di_pin = int(di_pin)
+        self.bi_pin = None if bi_pin in (None, 0) else int(bi_pin)
+        self.brightness = max(0.0, min(1.0, float(brightness)))
+        self._use_bi = (self.bi_pin is not None) and (self.bi_pin != self.di_pin)
         self.np_di = neopixel.NeoPixel(Pin(self.di_pin, Pin.OUT), self.total, bpp=3)
         self.np_bi = None
         if self._use_bi:
@@ -194,8 +197,8 @@ class _WS281xController:
 _strip = None
 def init(device=_DEFAULT_DEVICE, segments=_DEFAULT_SEGMENTS, leds_per_segment=_DEFAULT_LEDS_PER_SEG,
          brightness=_DEFAULT_BRIGHTNESS, di=None, bi=None):
-    global _strip
-    global _DEVICE = device
+    global _strip, _DEVICE
+    _DEVICE = device
     try:
         if di is None or bi is None:
             di_pin, bi_pin = _get_device_pins(device)
@@ -203,12 +206,10 @@ def init(device=_DEFAULT_DEVICE, segments=_DEFAULT_SEGMENTS, leds_per_segment=_D
             di_pin, bi_pin = int(di), int(bi)
         total = int(segments) * int(leds_per_segment)
         _strip = _WS281xController(total_leds=total, di_pin=di_pin, bi_pin=bi_pin, brightness=brightness)
-        _total_leds = total
         return _strip
     except Exception as e:
         print("addr_leds init failed:", e)
         _strip = None
-        _total_leds = 0
         return None
 def set_mode(name, **params):
     s = _strip
@@ -223,4 +224,5 @@ async def run():
     if s is None:
         while True:
             await asyncio.sleep_ms(1000)
+        return
     await s.run()
