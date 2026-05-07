@@ -132,17 +132,25 @@ async def diagnostic_loop(i2c, enabled=True):
             except Exception: print("Diagnostic loop error:", e)
             await asyncio.sleep(0.5)
 
-async def main(run_diag=False):
+async def main(run_diag=False, display_mode=False):
     i2c = None
     #if imu:
         #i2c = imu.init()
     led_ok = False
+    tasks = []
     if addr_leds:
         s = addr_leds.init(device="wand", segments=1, leds_per_segment=20, brightness=0.5)
         if s:
-            addr_leds.set_mode("chase", colour=(0,64,128), period_ms=1800)
+            if not display_mode:
+                addr_leds.set_mode("chase")
+                #addr_leds.set_mode("rainbow", step_ms=1800)
+                #addr_leds.set_mode("solid", color=(255, 0, 0))
+            else:
+                tasks.append(asyncio.create_task(addr_leds.test_mode()))
             led_ok = True
-    tasks = []
+        else:
+            try: io.signal(102, "Addr_init failed")
+            except Exception: print("Addr_init failed")
     try:
         if imu and ble:
             tasks.append(asyncio.create_task(imu_loop()))
