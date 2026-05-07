@@ -12,7 +12,7 @@ import resources.user_signaling as io
 #     import resources.dock_ui as dock_ui
 # except Exception as e:
 #     dock_ui = None
-#     io.signal(201, e)
+#     io.signal(103, e)
 # BLE configuration
 aioble.config(mtu=96)
 # UUIDs must match the wand
@@ -95,7 +95,7 @@ async def find_wand():
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        io.signal(202, e)
+        io.signal(103, e)
         return None
 async def connect_wand(adv):
     # Attempt to connect to a seen advertisement
@@ -107,7 +107,7 @@ async def connect_wand(adv):
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        io.signal(203, e)
+        io.signal(103, e)
         return None
 async def discover_characteristics(conn):
     # Discover service and its characteristics on the wand
@@ -121,7 +121,7 @@ async def discover_characteristics(conn):
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        io.signal(204, e)
+        io.signal(103, e)
         return None, None, None, None
 async def subscribe_notifications(char):
     # Enable notifications on a given characteristic
@@ -132,7 +132,7 @@ async def subscribe_notifications(char):
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        io.signal(205, e)
+        io.signal(103, e)
         return False
 # -----------------------------------------------------------------------------
 # Receivers for notifications
@@ -147,11 +147,11 @@ async def recv_imu_raw_task(char):
                 imu_raw_latest = parsed
                 await _queue_put_latest(imu_raw_queue, parsed)
             except Exception as e:
-                io.signal(206, e)
+                io.signal(103, e)
     except asyncio.CancelledError:
         pass
     except Exception as e:
-        io.signal(206, e)
+        io.signal(103, e)
 async def recv_imu_fused_task(char):
     global imu_fused_latest
     try:
@@ -162,11 +162,11 @@ async def recv_imu_fused_task(char):
                 imu_fused_latest = parsed
                 await _queue_put_latest(imu_fused_queue, parsed)
             except Exception as e:
-                io.signal(207, e)
+                io.signal(103, e)
     except asyncio.CancelledError:
         pass
     except Exception as e:
-        io.signal(207, e)
+        io.signal(103, e)
 async def recv_system_task(char):
     global system_latest
     try:
@@ -177,11 +177,11 @@ async def recv_system_task(char):
                 system_latest = parsed
                 await _queue_put_latest(system_queue, parsed)
             except Exception as e:
-                io.signal(208, e)
+                io.signal(103, e)
     except asyncio.CancelledError:
         pass
     except Exception as e:
-        io.signal(208, e)
+        io.signal(103, e)
 # -----------------------------------------------------------------------------
 # Control commands to wand
 # -----------------------------------------------------------------------------
@@ -193,7 +193,7 @@ async def wand_set_led_rainbow(control_char):
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        io.signal(209, e)
+        io.signal(103, e)
 async def wand_reset(control_char):
     # cmd = 2 per wand's handle_control()
     try:
@@ -202,7 +202,7 @@ async def wand_reset(control_char):
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        io.signal(209, e)
+        io.signal(103, e)
 # -----------------------------------------------------------------------------
 # High-level runner: auto-connect, subscribe, receive, reconnect on drop
 # -----------------------------------------------------------------------------
@@ -257,7 +257,7 @@ async def ble_main():
             # Graceful shutdown requested
             break
         except Exception as e:
-            io.signal(210, e)
+            io.signal(103, e)
         finally:
             # Cleanup
             for t in tasks:
@@ -294,7 +294,7 @@ async def print_status_task():
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(211, e)
+            io.signal(103, e)
 # -----------------------------------------------------------------------------
 # Entrypoint helpers
 # -----------------------------------------------------------------------------
@@ -314,7 +314,7 @@ def run():
     try:
         asyncio.run(main())
     except Exception as e:
-        io.signal(212, e)
+        io.signal(103, e)
 # If this file is executed directly:
 if __name__ == "__main__":
     run()
