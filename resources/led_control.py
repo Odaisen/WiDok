@@ -1,12 +1,14 @@
 # Programmer : Odaisen
-# Last update: 05/05/2026
+# Last update: 07/05/2026
 
 import uasyncio as asyncio
 from machine import Pin
 import neopixel
+import resources.user_signaling as io
 
 '''
 Modes:
+Off
 Solid
 Breathe
 Chase
@@ -14,33 +16,33 @@ Rainbow
 '''
 
 _ADDR_LED_PINS = {
-    "wand": (8, 18),   # IO8=DI, IO18=BI
-    "dock": (0, 0),    # placeholder
+    "wand": (8, 18),
+    "dock": (None, None),
 }
 _DEFAULT_DEVICE = "wand"
+_DEVICE = _DEFAULT_DEVICE
 _DEFAULT_SEGMENTS = 1
 _DEFAULT_LEDS_PER_SEG = 20
 _DEFAULT_BRIGHTNESS = 0.15
-_ENABLE_GAMMA = True
+
+# Gamma compensates for human eyes non-linear sensitivity
 def _build_gamma(gamma=2.2):
     lut = bytearray(256)
     for i in range(256):
         lut[i] = int((i / 255.0) ** gamma * 255 + 0.5)
     return lut
-_GAMMA = _build_gamma() if _ENABLE_GAMMA else None
+_GAMMA = _build_gamma()
+
+# Scales rgb by brightness, clamps it and returns the gamma-corrected values
 def _scale_color(rgb, brightness):
-    r, g, b = int(rgb[0]) & 255, int(rgb[1]) & 255, int(rgb[2]) & 255
-    if _GAMMA:
-        r, g, b = _GAMMA[r], _GAMMA[g], _GAMMA[b]
-    if brightness < 1.0:
-        br = brightness
-        r = int(r * br)
-        g = int(g * br)
-        b = int(b * br)
-    if r > 255: r = 255
-    if g > 255: g = 255
-    if b > 255: b = 255
-    return (r, g, b)
+    r = int(rgb[0] * brightness)
+    g = int(rgb[1] * brightness)
+    b = int(rgb[2] * brightness)
+    r = 0 if r < 0 else 255 if r > 255 else r
+    g = 0 if g < 0 else 255 if g > 255 else g
+    b = 0 if b < 0 else 255 if b > 255 else b
+    return _GAMMA[r], _GAMMA[g], _GAMMA[b]
+
 def _wheel(pos):
     pos = 255 - (pos & 255)
     if pos < 85:
@@ -50,11 +52,13 @@ def _wheel(pos):
         return (0, pos * 3, 255 - pos * 3)
     pos -= 170
     return (pos * 3, 255 - pos * 3, 0)
+
 def _get_device_pins(device):
     pins = _ADDR_LED_PINS.get(device)
     if not pins:
         raise ValueError("Unknown device '{}' or LED pins not set".format(device))
     return int(pins[0]), int(pins[1])
+
 class _WS281xController:
     def __init__(self, total_leds, di_pin, bi_pin, brightness):
         self.total = int(total_leds)
@@ -63,6 +67,8 @@ class _WS281xController:
         self.di_pin = int(di_pin)
         self.bi_pin = int(bi_pin)
         self.brightness = max(0.0, min(1.0, float(brightness)))
+        if self.di_pin in (0, None):
+            raise ValueError("DI pin must be a valid non-zero pin")
         self._use_bi = (self.bi_pin not in (None, 0)) and (self.bi_pin != self.di_pin)
         self.np_di = neopixel.NeoPixel(Pin(self.di_pin, Pin.OUT), self.total, bpp=3)
         self.np_bi = None
@@ -125,15 +131,11 @@ class _WS281xController:
         await asyncio.sleep_ms(dt)
     async def _step_chase(self, color=(255, 160, 32), tail=12, step_ms=25):
         total = self.total
-        if total <= 0:
-            await asyncio.sleep_ms(step_ms)
-            return
         self._tick = (self._tick + 1) % total
         head = self._tick
         tail = max(1, int(tail))
         # clear
-        for i in range(total):
-            self._set_both(i, (0, 0, 0))
+        self._fill_both((0, 0, 0))
         # draw tail with linear fade
         for t in range(tail):
             idx = (head - t) % total
@@ -142,7 +144,7 @@ class _WS281xController:
         self._write_both()
         await asyncio.sleep_ms(int(step_ms))
     async def _step_rainbow(self, cycle_ms=4000):
-        frame_dt = 33  # ~30 fps
+        frame_dt = 33
         off = self._rainbow_off
         total = self.total
         for i in range(total):
@@ -174,7 +176,6 @@ class _WS281xController:
                 elif m == "rainbow":
                     await self._step_rainbow(cycle_ms=int(p.get("cycle_ms", 4000)))
                 else:
-                    # unknown mode: turn off softly
                     await self._step_off()
             except asyncio.CancelledError:
                 # ensure off on cancel
@@ -184,22 +185,17 @@ class _WS281xController:
                 except Exception:
                     pass
                 raise
-            except Exception:
-                # brief pause on unexpected error, keep running
+            except Exception as e:
+                io.signal(107, _DEVICE, e)
                 await asyncio.sleep_ms(50)
 # -----------------------
 # Module-level interface
 # -----------------------
 _strip = None
-_total_leds = 0
 def init(device=_DEFAULT_DEVICE, segments=_DEFAULT_SEGMENTS, leds_per_segment=_DEFAULT_LEDS_PER_SEG,
          brightness=_DEFAULT_BRIGHTNESS, di=None, bi=None):
-    """
-    Initialize the strip.
-    - device: key from _ADDR_LED_PINS to get (di, bi) pins, unless di/bi override is provided
-    - segments * leds_per_segment = total LED count
-    """
-    global _strip, _total_leds
+    global _strip
+    global _DEVICE = device
     try:
         if di is None or bi is None:
             di_pin, bi_pin = _get_device_pins(device)
@@ -225,7 +221,6 @@ def set_brightness(value):
 async def run():
     s = _strip
     if s is None:
-        # Keep yielding so task can be scheduled even if not initialized
         while True:
             await asyncio.sleep_ms(1000)
     await s.run()

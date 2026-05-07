@@ -1,5 +1,5 @@
 # Programmer: Odaisen
-# Last Update: 02/05/26
+# Last Update: 07/05/26
 
 import uasyncio as asyncio
 import aioble
@@ -140,7 +140,7 @@ async def handle_control():
             cmd = data[0]
             if cmd == 1:
                 print("LED command received")
-                addr_leds.set_brightness(0.12)
+                addr_leds.set_mode("rainbow")
 
             elif cmd == 2:
                 print("Reset requested")

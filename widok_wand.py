@@ -8,6 +8,7 @@ io = None; t = 0
 while not io and t < 10:
     try:
         import resources.user_signaling as io
+        io.init("wand")
     except Exception as e:
         print("IO import failed: ", e)
         time.sleep(1)
@@ -17,29 +18,25 @@ try:
     import resources.imu as imu
 except Exception as e:
     imu = None
-    print("IMU import failed:", e)
-    io.signal(102, "wand", e)
+    io.signal(102, e)
 
 try:
     import resources.bluetooth_protocol_wand as ble
 except Exception as e:
     ble = None
-    print("BLE import failed: ", e)
-    io.signal(102, "wand", e)
+    io.signal(102, e)
 
 try:
     import resources.battery_sensing as bat
 except Exception as e:
     bat = None
-    print("Battery sensing import failed: ", e)
-    io.signal(102, "wand", e)
+    io.signal(102, e)
 
 try:
     import resources.led_control as addr_leds
 except Exception as e:
     addr_leds = None
-    print("Adressable led import failed: ", e)
-    io.signal(107, "wand", e)
+    io.signal(107, e)
 
 '''
 IO8     - LED DI
@@ -72,7 +69,7 @@ async def imu_loop():
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(104, "wand", e)
+            io.signal(104, e)
             await asyncio.sleep_ms(100)
 
 # Gets battery data, and publishes it on ble
@@ -86,14 +83,14 @@ async def system_loop():
             try:
                 battery_v, battery_pct = bat.read_battery_v()
             except Exception as e:
-                io.signal(105, "wand", e)
+                io.signal(105, e)
             flags = 0
             ble.system_data = (ts, battery_v, battery_pct, flags)
             await asyncio.sleep(5)
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(101, "wand", e)
+            io.signal(101, e)
             await asyncio.sleep(5)
 
 # Diagnostic loop
@@ -110,27 +107,27 @@ async def diagnostic_loop(i2c, enabled=True):
                     batt = bat.read_battery_v()
                     batt_str = "{:.2f} V, {}%".format(batt[0], batt[1])
             except Exception as e:
-                io.signal(105, "wand", e)
+                io.signal(105, e)
             print("Time:", ts)
             print("Battery:", batt_str)
             if i2c:
                 try:
                     print("I2C Scan:", i2c.scan())
                 except Exception as e:
-                    io.signal(104, "wand", e)
+                    io.signal(104, e)
             await asyncio.sleep(3)
         except asyncio.CancelledError:
             break
         except Exception as e:
-            io.signal(101, "wand", e)
+            io.signal(101, e)
             await asyncio.sleep(0.5)
 
 async def main(run_diag=True):
     #i2c = None
     #if imu:
         #i2c = imu.init()
-    addr_leds.init(device="wand", segments=1, leds_per_segment=20, brightness=0)
-    addr_leds.set_mode("rainbow", color=(0, 64, 128), period_ms=1800)
+    addr_leds.init(device="wand", segments=1, leds_per_segment=20, brightness=1)
+    addr_leds.set_mode("chase", color=(0, 64, 128), period_ms=1800)
     tasks = []
     try:
         if imu and ble:
