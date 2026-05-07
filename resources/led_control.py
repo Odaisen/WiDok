@@ -5,6 +5,7 @@ import uasyncio as asyncio
 from machine import Pin
 import neopixel
 import resources.user_signaling as io
+import time
 
 '''
 Modes:
@@ -107,6 +108,7 @@ class _WS281xController:
     def _write_both(self):
         self.np_di.write()
         if self._use_bi:
+            time.sleep_us(150) # A little delay between writing to DI and BI to prevent crosstalk
             self.np_bi.write()
     # --------------- Pattern steps (one frame) ---------------
     async def _step_off(self):
@@ -226,3 +228,20 @@ async def run():
             await asyncio.sleep_ms(1000)
         return
     await s.run()
+
+async def test_mode():
+    while True:
+        set_mode("solid", color=(255, 0, 0))
+        await asyncio.sleep_ms(500)
+        set_mode("solid", color=(0, 255, 0))
+        await asyncio.sleep_ms(500)
+        set_mode("solid", color=(0, 0, 255))
+        await asyncio.sleep_ms(500)
+        set_mode("breathe")
+        await asyncio.sleep(4)
+        set_mode("chase")
+        await asyncio.sleep(4)
+        set_mode("rainbow")
+        await asyncio.sleep(4)
+        set_mode("off")
+        await asyncio.sleep(1)
