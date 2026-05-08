@@ -7,6 +7,8 @@
 import machine
 import time
 import uasyncio as asyncio
+
+import resources.bluetooth_protocol_dock
 import resources.bluetooth_protocol_dock as ble_dock
 #import time
 from time import sleep
@@ -240,7 +242,7 @@ async def main():
     print("pwm stuff done?")
 
     # Start BLE client in the background
-    asyncio.create_task(ble_client_main())
+    asyncio.create_task(resources.bluetooth_protocol_dock.ble_client_main())
 
     # Your normal main loop (still runs everything else)
     while True:

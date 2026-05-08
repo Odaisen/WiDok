@@ -22,74 +22,90 @@ latest_system    = None
 connection       = None
 control_char     = None
 
+# ================== PROPER INITIALIZATION ==================
+aioble.config(mtu=96)                    # Same as your host
+ble = bluetooth.BLE()
+ble.active(True)                         # Explicitly turn on BLE radio
+
 async def connect_to_wand():
     global connection, control_char
     print("Scanning for WiDok-Wand...")
 
-    async for adv in aioble.scan(5000, active=True):
-        if adv.name() == DEVICE_NAME or SERVICE_UUID in adv.services():
-            print("Found WiDok-Wand:", adv.device)
-            try:
-                connection = await aioble.connect(adv.device)
-                print("Connected to WiDok-Wand!")
+    # Correct context-manager style (this fixes the AssertionError)
+    async with aioble.scan(5000, interval_us=30000, window_us=30000, active=True) as scanner:
+        async for adv in scanner:
+            if adv.name() == DEVICE_NAME or SERVICE_UUID in adv.services():
+                print("Found WiDok-Wand:", adv.device)
+                try:
+                    # THIS IS THE FIXED LINE:
+                    connection = await adv.device.connect(timeout_ms=8000)
+                    print("Connected to WiDok-Wand!")
 
-                service = await connection.service(SERVICE_UUID)
+                    service = await connection.service(SERVICE_UUID)
 
-                # Get all characteristics
-                raw_char   = await service.characteristic(IMU_RAW_UUID)
-                fused_char = await service.characteristic(IMU_FUSED_UUID)
-                sys_char   = await service.characteristic(SYSTEM_UUID)
-                control_char = await service.characteristic(CONTROL_UUID)
+                    # Get all characteristics
+                    raw_char   = await service.characteristic(IMU_RAW_UUID)
+                    fused_char = await service.characteristic(IMU_FUSED_UUID)
+                    sys_char   = await service.characteristic(SYSTEM_UUID)
+                    control_char = await service.characteristic(CONTROL_UUID)
 
-                # Subscribe to notifications (the host pushes data)
-                await raw_char.subscribe(notify=True)
-                await fused_char.subscribe(notify=True)
-                await sys_char.subscribe(notify=True)
+                    # Subscribe to notifications (the host pushes data)
+                    await raw_char.subscribe(notify=True)
+                    await fused_char.subscribe(notify=True)
+                    await sys_char.subscribe(notify=True)
 
-                print("Subscribed to all notifications")
+                    print("Subscribed to all notifications")
 
-                # Start background receivers
-                asyncio.create_task(receive_imu_raw(raw_char))
-                asyncio.create_task(receive_imu_fused(fused_char))
-                asyncio.create_task(receive_system(sys_char))
-
-                return True
-            except Exception as e:
-                print("Connection failed:", e)
-                await asyncio.sleep_ms(1000)
+                    # Start background receivers
+                    asyncio.create_task(receive_imu_raw(raw_char))
+                    asyncio.create_task(receive_imu_fused(fused_char))
+                    asyncio.create_task(receive_system(sys_char))
+                    return True
+                except Exception as e:
+                    print("Connection failed:", e)
+                    await asyncio.sleep_ms(1000)
     print("WiDok-Wand not found")
     return False
 
 async def receive_imu_raw(char):
+    print("IMU RAW receiver started")
     global latest_imu_raw
     while True:
         try:
             data = await char.notified()
+            print("raw bytes received:",data)
             latest_imu_raw = struct.unpack("<Iffffff", data)  # ts, ax, ay, az, gx, gy, gz
             print(f"IMU RAW → {latest_imu_raw}")
             # You can later push this to TFT or use it for anything
-        except Exception:
-            await asyncio.sleep_ms(100)
+        except Exception as e:
+            print("IMU RAW failed:", e)
+            await asyncio.sleep_ms(200)
 
 async def receive_imu_fused(char):
+    print("IMU FUSED receiver started")
     global latest_imu_fused
     while True:
         try:
             data = await char.notified()
+            print("imu fused bytes received:",data)
             latest_imu_fused = struct.unpack("<Iffff", data)  # ts, qw, qx, qy, qz
             print(f"IMU FUSED → {latest_imu_fused}")
-        except Exception:
-            await asyncio.sleep_ms(100)
+        except Exception as e:
+            print("IMU FUSED failed:", e)
+            await asyncio.sleep_ms(200)
 
 async def receive_system(char):
+    print("SYSTEM receiver started")
     global latest_system
     while True:
         try:
             data = await char.notified()
+            print("system bytes received:",data)
             latest_system = struct.unpack("<IfBB", data)  # ts, battery_v, battery_pct, flags
             print(f"SYSTEM → Battery {latest_system[1]:.2f}V  {latest_system[2]}%")
-        except Exception:
-            await asyncio.sleep_ms(100)
+        except Exception as e:
+            print("SYSTEM failed:", e)
+            await asyncio.sleep_ms(200)
 
 async def send_command(cmd: int):
     """Example: send command to host (1 = rainbow LEDs, 2 = reset IMU)"""
