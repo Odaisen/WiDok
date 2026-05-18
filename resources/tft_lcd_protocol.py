@@ -31,7 +31,7 @@ spi = machine.SPI(
     mosi=machine.Pin(SPI_SDA)
 )
 
-display = st7735.ST7735(
+display = st7735.st7735(
     spi,
     rst=machine.Pin(PIN_RES),
     dc=machine.Pin(PIN_DC),
