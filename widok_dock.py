@@ -8,6 +8,7 @@ import machine
 import time
 import uasyncio as asyncio
 
+import resources.tft_lcd_protocol as tft_lcd
 import resources.bluetooth_protocol_dock
 import resources.bluetooth_protocol_dock as ble_dock
 #import time
@@ -244,12 +245,15 @@ async def main():
     # Start BLE client in the background
     asyncio.create_task(resources.bluetooth_protocol_dock.ble_client_main())
 
+    print("widok ui starting")
+    await tft_lcd.ui_loop()
+
     # Your normal main loop (still runs everything else)
     while True:
         # Example: every 5 seconds send a test command
         # await send_command(1)   # rainbow LEDs on host
         await asyncio.sleep_ms(50)
-
+        
 
     while False:
         p_test.value(1)
