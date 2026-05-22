@@ -4,48 +4,53 @@ WiDok is a library for all files and code for the Wireless Dock project
 ## Installation
 Clone the project in PyCharm and follow [this](https://medium.com/@andymule/micropython-in-pycharms-basic-setup-9169b497ec8a) tutorial to get MicroPython set up in the project.
 
-Then install neccessary libraries using:
-
-```bash
-pip install -r requirements.txt
-```
-
 ## Usage
-Configure run options and add MicroPython upload and execute for quick upload and testing to the ESP32.
-
-Please also add info to the `README.md` if you create a new file, or change / add to the functions of a file.
+Install and configure MicroPython for your PCB. Connect and upload files for your PCB, open REPL in MicroPython Tools and soft reboot.
 
 > [!TIP]
-> If you want the uploaded ESP32 files to auto-start at boot, change the WiDok-Wand / -Dock file name to main.py before uploading.
+> Change the main.py file to use either Wand or Dock to auto-start preferred file at boot
+
+Please add info to the `README.md` if you create a new file, or change / add to the functions of a file.
 
 ## File explanation
 ### Source folder
 🔹 **WiDok-Wand**
   - Main file for the Wand
+  - Defines and starts all sub-async tasks
 
 🔹 **WiDok-Dock**
   - Main file for the Dock
 
-🔹 **Requirements**
-  - File with all required libraries
-  - Quick installation with:
-```bash
-pip install -r requirements.txt
-```
-  - Quick library updating with: (NOTE: DO NOT USE)
-```bash
-pip freeze > requirements.txt
-```
+### Source/Resources
+🔹 **Battery_Sensing** (`Wand`)
+  - Initialization and reading of ADC pin
 
-### Resource folder
-🔹**Bluetooth-Protocol** (`Wand`, `Dock`)
- - All code for bluetooth communication between the Wand and the Dock
+🔹**Bluetooth_Protocol_** (`Wand`, `Dock`)
+ - Bluetooth_Protocol_Wand: *Initializing, publishing and notifying of data over BLE*
+ - Bluetooth_Protocol_Dock: *Unspecified*
  - To add characteristic ID's for new elements, genereate an unique UUID [here](https://www.uuidgenerator.net/)
 
-🔹**IMU-DataCollector** (`Wand`)
- - All code for the communication with the on board IMU
+🔹**IMU** (`Wand`)
+ - Communication with the on board IMU, including the processing of said data
 
-🔹**Kalman-Filter** (`Dock`)
- - Kalman-Filter for the IMU-Data
+🔹 **LED_control** (`Wand`)
+  - Control object for LED's, with necessary sub-functions
+> **LED_control is universal** (Usable on both boards, with possibility for expansion)
+
+🔹 **Tft_ldc_protocol** (`Dock`)
+  - Undefined
+
+🔹 **User_Signaling** (`Wand`, `Dock`)
+  - Custom error handling
+
+| **Error Code** | **Error Description** |
+| :------------: | :-------------------: |
+| `101` | *Unknown Error* |
+| `102` | *Startup Error* |
+| `103` | *Bluetooth Error* |
+| `104` | *IMU Error* |
+| `105` | *Battery Sensing Error* |
+| `106` | *Temperature Error* |
+| `107` | *Adressable LED Error* |
 
 > **Thanks for the read<3** -Odaisen
