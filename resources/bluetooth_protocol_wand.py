@@ -73,10 +73,6 @@ b - Signed byte     (1 byte)
 async def send_imu_raw(connection):
     while True:
         try:
-            if not _cccd_enabled(imu_raw_char):
-                await asyncio.sleep(0.1)
-                continue
-
             data = imu_raw_data
             if isinstance(data, tuple) and len(data) == 7:
                 payload = encode_imu_raw(*data)
@@ -93,10 +89,6 @@ async def send_imu_raw(connection):
 async def send_imu_fused(connection):
     while True:
         try:
-            if not _cccd_enabled(imu_fused_char):
-                await asyncio.sleep(0.1)
-                continue
-
             data = imu_fused_data
             if isinstance(data, tuple) and len(data) == 5:
                 payload = encode_imu_fused(*data)
@@ -113,10 +105,6 @@ async def send_imu_fused(connection):
 async def send_system(connection):
     while True:
         try:
-            if not _cccd_enabled(system_char):
-                await asyncio.sleep(0.2)
-                continue
-
             data = system_data
             if isinstance(data, tuple) and len(data) == 4:
                 payload = encode_system(*data)

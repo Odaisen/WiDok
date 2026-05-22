@@ -132,7 +132,7 @@ async def diagnostic_loop(i2c, enabled=True):
             except Exception: print("Diagnostic loop error:", e)
             await asyncio.sleep(0.5)
 
-async def main(run_diag=False, display_mode=False):
+async def main(run_diag=False, display_mode=True):
     i2c = None
     #if imu:
         #i2c = imu.init()
