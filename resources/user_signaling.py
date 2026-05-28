@@ -6,7 +6,7 @@ from machine import Pin, Signal
 
 # Error codes with attached cause
 ERROR_INFO = {
-    101: ("Unknown", 1),
+    101: ("Unknown error", 1),
     102: ("Startup error", 2),
     103: ("Bluetooth error", 3),
     104: ("IMU error", 4),

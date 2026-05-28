@@ -132,36 +132,38 @@ async def diagnostic_loop(i2c, enabled=True):
             except Exception: print("Diagnostic loop error:", e)
             await asyncio.sleep(0.5)
 
-async def main(run_diag=False, display_mode=True):
+async def main(run_diag=False, display_mode=False):
     i2c = None
-    #if imu:
-        #i2c = imu.init()
+    if imu:
+        i2c = imu.init()
     led_ok = False
     tasks = []
+    #'''
     if addr_leds:
-        s = addr_leds.init(device="wand", segments=1, leds_per_segment=20, brightness=0.5)
+        s = addr_leds.init(device="wand", segments=1, leds_per_segment=20, brightness=100)
         if s:
             if not display_mode:
-                addr_leds.set_mode("chase")
+                #addr_leds.set_mode("chase")
                 #addr_leds.set_mode("rainbow", step_ms=1800)
-                #addr_leds.set_mode("solid", color=(255, 0, 0))
+                addr_leds.set_mode("solid", color=(64, 64, 64))
             else:
                 tasks.append(asyncio.create_task(addr_leds.test_mode()))
             led_ok = True
         else:
             try: io.signal(102, "Addr_init failed")
             except Exception: print("Addr_init failed")
+    #'''
     try:
-        if imu and ble:
-            tasks.append(asyncio.create_task(imu_loop()))
-        if ble:
-            tasks.append(asyncio.create_task(ble.ble_main()))
+        #if imu and ble:
+        #    tasks.append(asyncio.create_task(imu_loop()))
+        #if ble:
+        #    tasks.append(asyncio.create_task(ble.ble_main()))
         if led_ok:
             tasks.append(asyncio.create_task(addr_leds.run()))
-        if bat and ble:
-            tasks.append(asyncio.create_task(system_loop()))
-        if run_diag and i2c:
-            tasks.append(asyncio.create_task(diagnostic_loop(i2c, enabled=run_diag)))
+        #if bat and ble:
+        #    tasks.append(asyncio.create_task(system_loop()))
+        #if run_diag and i2c:
+        #    tasks.append(asyncio.create_task(diagnostic_loop(i2c, enabled=run_diag)))
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
         pass
