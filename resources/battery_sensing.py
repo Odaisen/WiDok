@@ -4,7 +4,7 @@
 from machine import ADC, Pin
 BAT_PIN = 10
 ATTN = ADC.ATTN_6DB
-VREF = 2.2 # TODO: Calibrate after connecting battery
+VREF = 2.2
 V_SCALING = 2
 _adc = None
 
