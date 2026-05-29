@@ -1,11 +1,11 @@
 # WiDok<3
-WiDok is a library for all files and code for the Wireless Dock project
+WiDok is a library for all files and code for the Wireless Dock and Wand project
 
 ## Installation
 Clone the project in PyCharm and follow [this](https://medium.com/@andymule/micropython-in-pycharms-basic-setup-9169b497ec8a) tutorial to get MicroPython set up in the project.
 
 ## Usage
-Install and configure MicroPython for your PCB. Connect and upload files for your PCB, open REPL in MicroPython Tools and soft reboot.
+Install and configure MicroPython for your PCB. (ESP32-S3, octal-ram) Connect and flash the files to your PCB, open REPL in MicroPython Tools and soft reboot.
 
 > [!TIP]
 > Change the main.py file to use either Wand or Dock to auto-start preferred file at boot
